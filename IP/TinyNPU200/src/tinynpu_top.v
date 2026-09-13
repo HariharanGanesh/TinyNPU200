@@ -2,15 +2,15 @@
 // Module: tinynpu_top.v
 // Project: TinyNPU200 v1.0
 //
-// ARCHITECTURE LAYER: Layer 1 — TinyNPU Core (Technology-Independent)
+// ARCHITECTURE LAYER: Layer 1 ??? TinyNPU Core (Technology-Independent)
 // =============================================================================
 //
 // UPGRADE FROM TinyNPU100 (TinyNPU2k200J):
-//   - Systolic array expanded: 8×8 → 20×8 (160 DSP48s, ~24.96 GOPS @ 195 MHz)
-//   - Processing element: 2-stage → 3-stage pipeline (195 MHz timing closure)
-//   - Activation unit:  2-bit sel → 3-bit sel (adds LeakyReLU + HardSwish)
-//   - Pooling unit:  1-bit mode → 2-bit mode (adds AvgPool)
-//   - CSR: 20 registers → 32 registers (stride_sel, act_ext, pool_mode, etc.)
+//   - Systolic array expanded: 8??8 ??? 20??8 (160 DSP48s, ~24.96 GOPS @ 195 MHz)
+//   - Processing element: 2-stage ??? 3-stage pipeline (195 MHz timing closure)
+//   - Activation unit:  2-bit sel ??? 3-bit sel (adds LeakyReLU + HardSwish)
+//   - Pooling unit:  1-bit mode ??? 2-bit mode (adds AvgPool)
+//   - CSR: 20 registers ??? 32 registers (stride_sel, act_ext, pool_mode, etc.)
 //   - General-purpose: All modes runtime-selectable via CSR (no hardcoding)
 //
 // ASIC/FPGA PORTABILITY POLICY:
@@ -24,10 +24,10 @@
 //   clk_dma      : DMA controller
 //
 // DATA PATH (unchanged):
-//   AXI4-Stream sensor → axis_sink → activation_buffer (ping-pong)
-//   → systolic_array (20×8) OR dw_line_buffer (3×3 DW)
-//   → requantization → activation → pooling
-//   → bbox_decoder → threshold_filter → output_buffer → axis_source
+//   AXI4-Stream sensor ??? axis_sink ??? activation_buffer (ping-pong)
+//   ??? systolic_array (20??8) OR dw_line_buffer (3??3 DW)
+//   ??? requantization ??? activation ??? pooling
+//   ??? bbox_decoder ??? threshold_filter ??? output_buffer ??? axis_source
 //
 // Verilog-2001 Synthesizable RTL.
 // =============================================================================
@@ -40,14 +40,14 @@ module tinynpu_top #(
     parameter AXIS_DATA_WIDTH = 32,
     parameter DATA_WIDTH      = 8,
     parameter ACCUM_WIDTH     = 32,
-    parameter SCALE_WIDTH     = 32,
+    parameter SCALE_WIDTH     = 16,
     parameter SHIFT_WIDTH     = 6,
     parameter ARRAY_ROWS      = 20,   // TinyNPU200: 20 rows (was 8)
     parameter ARRAY_COLS      = 8,
     parameter BUFFER_DEPTH    = 1024,
     parameter BUFFER_ADDR_WIDTH = 10,
     parameter MAX_WIDTH       = 128,
-    parameter TILE_SIZE       = 160   // 20 rows × 8 cols per tile
+    parameter TILE_SIZE       = 160   // 20 rows ?? 8 cols per tile
 ) (
     input  wire aclk,
     input  wire aresetn,
@@ -76,7 +76,7 @@ module tinynpu_top #(
     input  wire                         s_axi_rready,
 
     // -------------------------------------------------------------------------
-    // AXI4-Full Master Interface (DMA — weight load and result store)
+    // AXI4-Full Master Interface (DMA ??? weight load and result store)
     // -------------------------------------------------------------------------
     output wire [AXI_ADDR_WIDTH-1:0]    m_axi_awaddr,
     output wire [7:0]                   m_axi_awlen,
@@ -188,7 +188,7 @@ module tinynpu_top #(
     assign interrupt = status_done & csr_irq_en;
 
     // =========================================================================
-    // Controller ↔ DMA Wire Bundle
+    // Controller ??? DMA Wire Bundle
     // =========================================================================
     wire        dma_start_load_wgt;
     wire        dma_start_load_act;
@@ -202,7 +202,7 @@ module tinynpu_top #(
     wire                         dma_wgt_wr_en;
 
     // =========================================================================
-    // Controller ↔ Internal Wire Bundle
+    // Controller ??? Internal Wire Bundle
     // =========================================================================
     wire [BUFFER_ADDR_WIDTH-1:0] act_buf_rd_addr;
     wire                         act_buf_rd_en;
@@ -263,7 +263,7 @@ module tinynpu_top #(
     );
 
     // =========================================================================
-    // Module 1: AXI4-Lite CSR (TinyNPU200 — 32 registers)
+    // Module 1: AXI4-Lite CSR (TinyNPU200 ??? 32 registers)
     // =========================================================================
     axi4_lite_slave #(
         .ADDR_WIDTH(AXI_ADDR_WIDTH),
@@ -358,7 +358,7 @@ module tinynpu_top #(
     // =========================================================================
     // Module 3: NPU Controller FSM
     // NOTE: csr_act_ext drives activation_unit; pool_mode drives pooling_unit.
-    // The controller FSM schedule is unchanged — only the data path modules
+    // The controller FSM schedule is unchanged ??? only the data path modules
     // change behavior based on the new CSR values.
     // =========================================================================
     npu_controller #(
@@ -488,7 +488,7 @@ module tinynpu_top #(
 
     // =========================================================================
     // Module 6: Weight Buffer (Dual-banked for DMA double-buffering)
-    // TinyNPU200: weight_data_flat is 20×8×8 = 1280 bits wide.
+    // TinyNPU200: weight_data_flat is 20??8??8 = 1280 bits wide.
     // =========================================================================
     wire [DATA_WIDTH*ARRAY_ROWS*ARRAY_COLS-1:0] weight_data_flat;
     wire                                         wgt_data_valid_unused;
@@ -513,7 +513,7 @@ module tinynpu_top #(
     );
 
     // =========================================================================
-    // Module 7: Systolic Array (TinyNPU200: 20×8)
+    // Module 7: Systolic Array (TinyNPU200: 20??8)
     // =========================================================================
     wire [ACCUM_WIDTH*ARRAY_COLS-1:0] systolic_psum_flat;
     wire [ARRAY_COLS-1:0]             systolic_valid_flat;
@@ -537,7 +537,7 @@ module tinynpu_top #(
     );
 
     // =========================================================================
-    // Module 8: Depthwise Line Buffer Engine (3×3 per channel)
+    // Module 8: Depthwise Line Buffer Engine (3??3 per channel)
     // =========================================================================
     wire [ACCUM_WIDTH*ARRAY_ROWS-1:0] dw_psum_flat;
     wire                              dw_psum_valid;
@@ -589,8 +589,8 @@ module tinynpu_top #(
         .clk(clk_compute), .rst_n(rst_n),
         .acc_in_flat(compute_psum_flat),
         .acc_valid(compute_psum_valid & requant_acc_valid),
-        .M0_flat({ARRAY_ROWS{csr_m0}}), 
-        .n_shift_flat({ARRAY_ROWS{csr_n_shift}}), 
+        .M0_flat({ARRAY_ROWS{csr_m0[SCALE_WIDTH-1:0]}}), 
+        .n_shift_flat({ARRAY_ROWS{csr_n_shift[SHIFT_WIDTH-1:0]}}), 
         .bias_flat({ARRAY_ROWS{csr_bias}}),
         .quant_out_flat(requant_out_flat),
         .quant_valid(requant_out_valid)
@@ -717,6 +717,25 @@ module tinynpu_top #(
     // =========================================================================
     // Module 15: AXI4-Stream Source (output to host)
     // =========================================================================
+    // Pipelined drain_words calculation to break 38-level critical path
+    (* use_dsp = "yes" *) reg [31:0] drain_mult_1;
+    (* use_dsp = "yes" *) reg [31:0] drain_mult_2;
+    (* use_dsp = "yes" *) reg [31:0] total_drain_words;
+    always @(posedge aclk) begin
+        if (!aresetn) begin
+            drain_mult_1      <= 32'd0;
+            drain_mult_2      <= 32'd0;
+            total_drain_words <= 32'd0;
+        end else begin
+            // Stage 1: 16-bit x 16-bit = 32-bit
+            drain_mult_1      <= {16'b0, csr_input_width} * {16'b0, csr_input_height};
+            // Stage 2: 32-bit x 16-bit = 32-bit
+            drain_mult_2      <= drain_mult_1 * {16'b0, csr_num_tiles_x};
+            // Stage 3: 32-bit x 16-bit = 32-bit
+            total_drain_words <= drain_mult_2 * {16'b0, csr_num_tiles_y};
+        end
+    end
+
     axis_source #(
         .AXIS_DATA_WIDTH(AXIS_DATA_WIDTH),
         .DATA_WIDTH(DATA_WIDTH),
@@ -728,7 +747,7 @@ module tinynpu_top #(
         .buf_rd_en(out_buf_rd_en),
         .buf_empty(out_buf_empty_w),
         .start_drain(status_done),
-        .drain_words({16'b0, csr_input_width} * {16'b0, csr_input_height} * {16'b0, csr_num_tiles_x} * {16'b0, csr_num_tiles_y}),
+        .drain_words(total_drain_words),
         .m_axis_tdata(m_axis_tdata),
         .m_axis_tvalid(m_axis_tvalid),
         .m_axis_tready(m_axis_tready),
@@ -737,3 +756,7 @@ module tinynpu_top #(
     );
 
 endmodule
+
+
+
+

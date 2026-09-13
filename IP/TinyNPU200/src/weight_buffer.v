@@ -18,10 +18,10 @@
 
 module weight_buffer #(
     parameter DATA_WIDTH   = 8,
-    parameter ARRAY_ROWS   = 8,
+    parameter ARRAY_ROWS   = 20, // UPDATED
     parameter ARRAY_COLS   = 8,
-    parameter BUFFER_DEPTH = 512,
-    parameter ADDR_WIDTH   = 9
+    parameter BUFFER_DEPTH = 1024,
+    parameter ADDR_WIDTH   = 10
 ) (
     input  wire                    clk,
     input  wire                    rst_n,
@@ -44,53 +44,42 @@ module weight_buffer #(
 );
 
     // =========================================================================
-    // Dual BRAM Banks
+    // Unified Dual-Port BRAM
     // =========================================================================
     (* ram_style = "block" *)
-    reg [DATA_WIDTH-1:0] weight_mem_bank0 [0:BUFFER_DEPTH-1];
-    (* ram_style = "block" *)
-    reg [DATA_WIDTH-1:0] weight_mem_bank1 [0:BUFFER_DEPTH-1];
+    reg [DATA_WIDTH-1:0] weight_mem [0:BUFFER_DEPTH*2-1];
 
     initial begin
-        $readmemh("dummy_weights.hex", weight_mem_bank0);
-        $readmemh("dummy_weights.hex", weight_mem_bank1);
+        $readmemh("dummy_weights.hex", weight_mem);
     end
 
     // =========================================================================
-    // Write Logic: DMA writes to the INACTIVE bank
+    // Write Logic: DMA writes to the INACTIVE bank (MSB = ~bank_sel)
     // =========================================================================
-    // Inactive bank = ~bank_sel
+    wire [ADDR_WIDTH:0] combined_wr_addr = {~bank_sel, wr_addr};
+
     always @(posedge clk) begin
         if (wr_en) begin
-            if (bank_sel == 1'b0) begin
-                // Compute reads Bank 0, so DMA writes Bank 1
-                weight_mem_bank1[wr_addr] <= wr_data;
-            end else begin
-                // Compute reads Bank 1, so DMA writes Bank 0
-                weight_mem_bank0[wr_addr] <= wr_data;
-            end
+            weight_mem[combined_wr_addr] <= wr_data;
         end
     end
 
     // =========================================================================
-    // Tile Load Controller: reads from ACTIVE bank
+    // Tile Load Controller: reads from ACTIVE bank (MSB = bank_sel)
     // =========================================================================
     reg [9:0] load_counter;
     reg       loading;
 
-    wire [ADDR_WIDTH-1:0] rd_addr_mux = tile_base_addr + load_counter;
+    wire [ADDR_WIDTH-1:0] rd_addr_mux = tile_base_addr + {{(ADDR_WIDTH-10){1'b0}}, load_counter};
+    wire [ADDR_WIDTH:0] combined_rd_addr = {bank_sel, rd_addr_mux};
+    
     reg  [DATA_WIDTH-1:0] rd_data_reg;
 
-    // Synchronous read from active bank
     always @(posedge clk) begin
-        if (bank_sel == 1'b0) begin
-            rd_data_reg <= weight_mem_bank0[rd_addr_mux];
-        end else begin
-            rd_data_reg <= weight_mem_bank1[rd_addr_mux];
-        end
+        rd_data_reg <= weight_mem[combined_rd_addr];
     end
 
-    // Loading FSM (unchanged logic — now operates on active bank reads)
+    // Loading FSM
     always @(posedge clk) begin
         if (!rst_n) begin
             loading           <= 1'b0;
@@ -134,7 +123,6 @@ module weight_buffer #(
     end
 
     // Pack 2D weight_data -> flat output
-    // Use localparams for loop bounds (Vivado requires localparam, not parameter)
     localparam GEN_WB_ROWS = ARRAY_ROWS;
     localparam GEN_WB_COLS = ARRAY_COLS;
     genvar r_pk, c_pk;

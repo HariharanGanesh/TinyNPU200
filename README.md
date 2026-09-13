@@ -14,7 +14,7 @@
 [![FPGA: Zynq-7020](https://img.shields.io/badge/FPGA-Zynq--7020-orange?style=flat-square)](https://www.xilinx.com/products/silicon-devices/soc/zynq-7000.html)
 [![Interface: AXI4](https://img.shields.io/badge/Interface-AXI4%20%7C%20AXI4--Lite%20%7C%20AXI4--Stream-green?style=flat-square)](https://developer.arm.com/documentation/ihi0022)
 [![Type: IP Core](https://img.shields.io/badge/Type-FPGA%20IP%20Core-purple?style=flat-square)](#)
-[![Simulation: PASS](https://img.shields.io/badge/Simulation-5%2F5%20PASS-brightgreen?style=flat-square)](#verification)
+[![Simulation: PASS](https://img.shields.io/badge/Simulation-9%2F9%20PASS-brightgreen?style=flat-square)](#verification)
 [![License: Proprietary](https://img.shields.io/badge/License-Proprietary%20%E2%80%94%20All%20Rights%20Reserved-red?style=flat-square)](TERMS_OF_USE.md)
 
 **Copyright (c) 2026 Hariharan Ganesh. All rights reserved.**
@@ -99,6 +99,21 @@ The IP is designed for integration with the **Xilinx Zynq-7020 SoC** (PYNQ-Z2 bo
 ```
 
 ---
+
+## Implementation Results (Phase 2 Update)
+
+The TinyNPU200 IP was rigorously optimized in Phase 2 to meet all timing and resource constraints for physical Zynq-7020 integration.
+
+| Metric | Phase 1 (Initial RTL) | Phase 2 (Optimized) |
+| :--- | :--- | :--- |
+| **Clock Frequency Target** | N/A | **100 MHz (10.0 ns)** |
+| **Timing Slack (WNS)** | -19.288 ns *(Violated)* | **+0.163 ns *(Met)*** |
+| **DSP Utilization** | 248 *(Over-utilized)* | **204** / 220 (92.73%) |
+| **BRAM Inference** | FAILED *(LUTRAM fallback)* | **13 Tiles *(SUCCESS)*** |
+| **LUT Utilization** | N/A | 14,008 / 53,200 (26.33%) |
+| **Total Power** | N/A | **0.672 W** (Dynamic: 0.559 W) |
+
+*Full authoritative Vivado implementation reports are available in the [docs/results/](docs/results/) directory.*
 
 ## Key Specifications
 
@@ -264,23 +279,19 @@ vivado tinynpu200_ip_packager/tinynpu200_ip_packager.xpr
 
 ## Verification
 
-The TinyNPU200 includes a comprehensive SystemVerilog testbench with 5 test cases,
-all verified passing under Vivado XSim behavioral simulation.
+The RTL is verified via a comprehensive SystemVerilog testbench (`tb_tinynpu_top.sv`) simulating the full AXI interconnect behavior. The testbench dynamically generates a formatted Tcl Console report covering 9 rigorous testcases.
 
-| # | Test | Type | Result |
-|---|---|---|---|
-| 1 | Reset verification | Initialization | PASS |
-| 2 | CSR R/W - LAYER_CFG_0 | Register access | PASS |
-| 3 | CSR R/W - WEIGHT_BASE | Register access | PASS |
-| 4 | Basic inference pipeline | Functional | PASS |
-| 5 | End-to-end inference verification | System-level | PASS |
+**Current Test Coverage (Phase 2):**
+1. **TC1:** Reset & Initialization (PASS)
+2. **TC2:** Basic CSR Read/Write (PASS)
+3. **TC3:** Boundary & Stress Checks (PASS)
+4. **TC4:** AXI Control & Handshaking (PASS)
+5. **TC5:** End-to-End Inference Verification (MATCH / PASS)
+6. **TC6:** Dynamic Inference Latency Calculation (PASS - precise `$realtime` extraction)
+7. **TC7:** Throughput Tracking (PASS)
+8. **TC8:** Multi-Sample Accuracy Framework (PASS)
+9. **TC9:** Reference Model Comparison Framework (PASS)
 
-**Test 5 details:** Applied known INT8 input [Ch0=1, Ch1=-1, others=0] with all weights = -35.
-Expected MAC result: (1 x -35) + (-1 x -35) = 0. DUT output: 0x00. Comparison: MATCH.
-
-See [docs/VERIFICATION.md](docs/VERIFICATION.md) for full test case documentation.
-
----
 
 ## IP Access
 
