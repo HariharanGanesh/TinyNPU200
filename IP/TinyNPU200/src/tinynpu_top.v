@@ -191,13 +191,9 @@ module tinynpu_top #(
     // Controller ??? DMA Wire Bundle
     // =========================================================================
     wire        dma_start_load_wgt;
-    wire        dma_start_load_act;
-    wire        dma_start_store_out;
-    wire [15:0] dma_transfer_size;
+            wire [15:0] dma_transfer_size;
     wire        dma_wgt_load_done;
-    wire        dma_act_load_done;
-    wire        dma_out_store_done;
-    wire [BUFFER_ADDR_WIDTH-1:0] dma_wgt_wr_addr;
+            wire [BUFFER_ADDR_WIDTH-1:0] dma_wgt_wr_addr;
     wire [DATA_WIDTH-1:0]        dma_wgt_wr_data;
     wire                         dma_wgt_wr_en;
 
@@ -341,16 +337,10 @@ module tinynpu_top #(
         .m_axi_rlast(m_axi_rlast), .m_axi_rvalid(m_axi_rvalid),
         .m_axi_rready(m_axi_rready),
         .weight_base_addr(csr_weight_base),
-        .act_base_addr(csr_act_base),
-        .out_base_addr(csr_out_base),
-        .transfer_size(dma_transfer_size),
+                        .transfer_size(dma_transfer_size),
         .start_load_weights(dma_start_load_wgt),
-        .start_load_act(1'b0),
-        .start_store_out(dma_start_store_out),
-        .weight_load_done(dma_wgt_load_done),
-        .act_load_done(dma_act_load_done),
-        .out_store_done(dma_out_store_done),
-        .wgt_buf_wr_addr(dma_wgt_wr_addr),
+                        .weight_load_done(dma_wgt_load_done),
+                        .wgt_buf_wr_addr(dma_wgt_wr_addr),
         .wgt_buf_wr_data(dma_wgt_wr_data),
         .wgt_buf_wr_en(dma_wgt_wr_en)
     );
@@ -385,13 +375,10 @@ module tinynpu_top #(
         .perf_out_stall_count(perf_out_stall_count),
         // DMA control
         .dma_start_load_wgt(dma_start_load_wgt),
-        .dma_start_load_act(dma_start_load_act),
-        .dma_start_store_out(dma_start_store_out),
-        .dma_transfer_size(dma_transfer_size),
+                        .dma_transfer_size(dma_transfer_size),
         .dma_wgt_load_done(dma_wgt_load_done),
-        .dma_act_load_done(stream_tile_received),
-        .dma_out_store_done(dma_out_store_done),
-        // Buffer control
+        .stream_act_load_done(stream_tile_received),
+                // Buffer control
         .wgt_buf_load_tile(wgt_buf_load_tile),
         .wgt_buf_load_complete(wgt_buf_load_complete),
         .act_buf_rd_addr(act_buf_rd_addr),

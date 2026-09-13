@@ -1,4 +1,4 @@
-<div align="center">
+﻿<div align="center">
 
 # TinyNPU200
 
@@ -425,3 +425,6 @@ For IP access requests, technical questions, or collaboration:
 
 *Copyright (c) 2026 Hariharan Ganesh. All rights reserved.*
 *This IP is proprietary. See TERMS_OF_USE.md and ACCESS.md.*
+
+### AXI-Stream TLAST Semantics
+In the TinyNPU200 architecture, the m_axis_tlast signal represents the **End of Tile**. It is asserted precisely on the final byte of the final word of each processed activation tile, allowing downstream DMAs (e.g., AXI DMA) to segment incoming data properly per-tile.

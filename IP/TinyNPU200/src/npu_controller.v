@@ -60,13 +60,10 @@ module npu_controller #(
 
     // DMA Interface Control
     output reg                          dma_start_load_wgt,
-    output reg                          dma_start_load_act,
-    output reg                          dma_start_store_out,
-    output reg  [15:0]                  dma_transfer_size,
+            output reg  [15:0]                  dma_transfer_size,
     input  wire                         dma_wgt_load_done,
-    input  wire                         dma_act_load_done,
-    input  wire                         dma_out_store_done,
-
+    input  wire                         stream_act_load_done,
+    
     // Buffer Controls
     output reg                          wgt_buf_load_tile,
     input  wire                         wgt_buf_load_complete,
@@ -193,9 +190,7 @@ module npu_controller #(
             status_done         <= 1'b0;
             status_error        <= 1'b0;
             dma_start_load_wgt  <= 1'b0;
-            dma_start_load_act  <= 1'b0;
-            dma_start_store_out <= 1'b0;
-            dma_transfer_size   <= 0;
+                                    dma_transfer_size   <= 0;
             wgt_buf_load_tile   <= 1'b0;
             act_buf_rd_addr     <= 0;
             act_buf_rd_en       <= 1'b0;
@@ -214,9 +209,7 @@ module npu_controller #(
         end else begin
             // Default: deassert single-cycle pulses
             dma_start_load_wgt  <= 1'b0;
-            dma_start_load_act  <= 1'b0;
-            dma_start_store_out <= 1'b0;
-            wgt_buf_load_tile   <= 1'b0;
+                                    wgt_buf_load_tile   <= 1'b0;
             act_buf_swap        <= 1'b0;
             array_psum_clear    <= 1'b0;
             array_weight_load   <= 1'b0;
@@ -241,8 +234,7 @@ module npu_controller #(
                             // loaded in weight bank. Skip DMA weight load — go
                             // straight to loading the embedding activation vector.
                             dma_transfer_size  <= csr_in_channels; // embedding dimension
-                            dma_start_load_act <= 1'b1;
-                            state              <= STATE_LOAD_ACT;
+                                                        state              <= STATE_LOAD_ACT;
                         end else begin
                             dma_transfer_size  <= ARRAY_ROWS * ARRAY_COLS;
                             dma_start_load_wgt <= 1'b1;
@@ -255,14 +247,13 @@ module npu_controller #(
                     if (dma_wgt_load_done) begin
                         $display("[NPU_CTRL @ %0t] WGT load done. Starting ACT load (size=%0d)", $time, csr_input_width * csr_input_height);
                         dma_transfer_size  <= csr_input_width * csr_input_height;
-                        dma_start_load_act <= 1'b1;
-                        state              <= STATE_LOAD_ACT;
+                                                state              <= STATE_LOAD_ACT;
                     end
                 end
 
 
                 STATE_LOAD_ACT: begin
-                    if (dma_act_load_done) begin
+                    if (stream_act_load_done) begin
                         act_buf_swap      <= 1'b1;
                         wgt_buf_load_tile <= 1'b1;
                         state             <= STATE_SETUP_WGT;
@@ -307,13 +298,13 @@ module npu_controller #(
                         array_en            <= 1'b0;
                         requant_acc_valid   <= 1'b0;
                         dma_transfer_size   <= csr_out_channels;
-                        dma_start_store_out <= 1'b1;
+                        // dma_start_store_out removed
                         state               <= STATE_STORE_OUT;
                     end
                 end
 
                 STATE_STORE_OUT: begin
-                    if (dma_out_store_done) begin
+                    if (1'b1) begin // dma_out_store_done removed
                         $display("[NPU_CTRL @ %0t] STORE_OUT done. tile_x=%0d tile_y=%0d, num_tiles_x=%0d num_tiles_y=%0d", $time, tile_x, tile_y, csr_num_tiles_x, csr_num_tiles_y);
                         if (tile_x + 16'd1 == csr_num_tiles_x) begin
                             tile_x <= 0;
@@ -324,14 +315,12 @@ module npu_controller #(
                             end else begin
                                 tile_y             <= tile_y + 16'd1;
                                 dma_transfer_size  <= csr_input_width * csr_input_height;
-                                dma_start_load_act <= 1'b1;
-                                state              <= STATE_LOAD_ACT;
+                                                                state              <= STATE_LOAD_ACT;
                             end
                         end else begin
                             tile_x             <= tile_x + 16'd1;
                             dma_transfer_size  <= csr_input_width * csr_input_height;
-                            dma_start_load_act <= 1'b1;
-                            state              <= STATE_LOAD_ACT;
+                                                        state              <= STATE_LOAD_ACT;
                         end
                     end
                 end
